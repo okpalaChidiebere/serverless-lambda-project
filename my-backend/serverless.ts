@@ -21,7 +21,19 @@ const serverlessConfiguration: AWS = {
     },
     environment: {
       AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1',
+      TODOS_TABLE: 'Todos-${self:provider.stage}', //we will get Todos-dev. Serverless will go to the provider section, then get the stage value
     },
+    iamRoleStatements: [
+      {
+        Effect: "Allow",
+        Action: [
+          "dynamodb:Scan",
+          "dynamodb:PutItem",
+        ],
+        Resource: "arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}"
+      },
+    ]
+  
   },
   functions: {
     GetTodos: {
@@ -35,6 +47,41 @@ const serverlessConfiguration: AWS = {
           }
         }
       ]
+    },
+    CreateTodo: {
+      handler: "src/lambda/http/createTodo.handler",
+      events: [
+        {
+          http: {
+            method: "post",
+            path: "todos",
+            cors: true,
+          }
+        }
+      ]
+    },
+  },
+  resources: {
+    Resources: {
+      TodosDynamoDBTable: {
+        Type: "AWS::DynamoDB::Table",
+        Properties: {
+          AttributeDefinitions: [
+            {
+              AttributeName: "todoId",
+              AttributeType: "S"
+            }
+          ],
+          KeySchema: [
+            {
+              AttributeName: "todoId", //partitionKey
+              KeyType: "HASH"
+            }
+          ],
+          BillingMode: "PAY_PER_REQUEST",
+          TableName: "${self:provider.environment.TODOS_TABLE}"
+        }
+      }
     }
   }
 }
