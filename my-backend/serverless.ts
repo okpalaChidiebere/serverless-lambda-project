@@ -1,7 +1,7 @@
 import type { AWS } from '@serverless/typescript';
 
 const serverlessConfiguration: AWS = {
-  service: 'my-backend',
+  service: 'serverless-todo-app',
   frameworkVersion: '2',
   custom: {
     webpack: {
@@ -14,6 +14,8 @@ const serverlessConfiguration: AWS = {
   provider: {
     name: 'aws',
     runtime: 'nodejs12.x',
+    stage: "${opt:stage, 'dev'}",
+    region: "ca-central-1",
     apiGateway: {
       minimumCompressionSize: 1024,
     },
@@ -22,13 +24,14 @@ const serverlessConfiguration: AWS = {
     },
   },
   functions: {
-    hello: {
-      handler: 'handler.hello',
+    GetTodos: {
+      handler: 'src/lambda/http/getTodos.handler',
       events: [
         {
           http: {
             method: 'get',
-            path: 'hello',
+            path: 'todos',
+            cors: true,
           }
         }
       ]
