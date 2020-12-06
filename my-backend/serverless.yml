@@ -19,6 +19,7 @@ provider:
   environment:
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
     TODOS_TABLE: Todos-${self:provider.stage} # we will get Todos-dev. Serverless will go to the provider section, then get the stage value
+    IMAGES_S3_BUCKET: serverless-todo-images-${self:provider.stage}
   apiGateway: 
     minimumCompressionSize: 1024
 
@@ -63,4 +64,36 @@ resources:
             KeyType: HASH
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.TODOS_TABLE} # we will get Todos-dev. Serverless will go to the provider section, then get the evnvironmrnt object, then get the value for the TODOS_TABLE
+
+    AttachmentsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.IMAGES_S3_BUCKET}
+        CorsConfiguration: # we set cors configurations so that when our application send request to this bucket, we will set the right cors header
+          CorsRules:
+            -
+              AllowedOrigins:
+                - '*'
+              AllowedHeaders:
+                - '*'
+              AllowedMethods:
+                - GET
+                - PUT
+                - POST
+                - DELETE
+                - HEAD
+              MaxAge: 3000
+    BucketPolicy: # we set a policy to this bucket to allow anybody to read images from this bucket
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        PolicyDocument:
+          Id: MyPolicy
+          Version: "2012-10-17"
+          Statement:
+            - Sid: PublicReadForGetBucketObjects
+              Effect: Allow  # allow
+              Principal: '*'  # anybody
+              Action: 's3:GetObject' #to get object 
+              Resource: 'arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*'
+        Bucket: !Ref AttachmentsBucket  #We assign the policy to a Bucket by referencing the attachment bucket that we defined above
 
