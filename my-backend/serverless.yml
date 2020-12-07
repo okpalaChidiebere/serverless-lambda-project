@@ -20,6 +20,7 @@ provider:
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
     TODOS_TABLE: Todos-${self:provider.stage} # we will get Todos-dev. Serverless will go to the provider section, then get the stage value
     IMAGES_S3_BUCKET: serverless-todo-images-${self:provider.stage}
+    SIGNED_URL_EXPIRATION: 300  # The amount of time we will allow a user to use our URL. Our presingned url will expire after this time
   apiGateway: 
     minimumCompressionSize: 1024
 
@@ -49,6 +50,20 @@ functions:
         Action:
           - dynamodb:PutItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+  GenerateUploadUrl:
+    handler: src/lambda/http/generateUploadUrl.handler
+    events:
+      - http:
+          method: post
+          path: todos/{todoId}/attachment
+          cors: true
+    iamRoleStatements: # permission that allows this function to write to S3 as well as generating a correct presinged Url. If you dont add this the presigned URL used will get an error
+      - Effect: Allow
+        Action:
+          - s3:PutObject
+          - s3:GetObject
+        Resource: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*
+
   
 
 resources:

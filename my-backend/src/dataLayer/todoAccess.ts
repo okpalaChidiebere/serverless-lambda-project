@@ -11,7 +11,10 @@ export class TodoAccess {
         private logger: any = createLogger('dataLayer'),
         private pid = uuid.v4(),
         private readonly docClient: DocumentClient = TodoAccess.createDynamoDBClient(),
-        private readonly todosTable = process.env.TODOS_TABLE){};
+        private readonly todosTable = process.env.TODOS_TABLE,
+        private readonly bucketName = process.env.IMAGES_S3_BUCKET,
+        private readonly urlExpiration = +process.env.SIGNED_URL_EXPIRATION //convert string to number with the plus sign
+        ){};
 
     async getAllTodos(): Promise<TodoItem[]> {
 
@@ -47,5 +50,27 @@ export class TodoAccess {
         return new AWS.DynamoDB.DocumentClient()
     }
 
+    createS3Client() {
+        return new AWS.S3({
+            signatureVersion: 'v4'
+        })
+    }
+
+    get getBucketName() {
+        return process.env.IMAGES_S3_BUCKET
+    }
+
+    getUploadUrl(imageId: string) {
+
+        this.logger.info('Getting PreSignedURL', {
+            pid: this.pid
+        })
+
+        return this.createS3Client().getSignedUrl('putObject', {
+          Bucket: this.bucketName,
+          Key: imageId,
+          Expires: this.urlExpiration
+        })
+    }
 
 }

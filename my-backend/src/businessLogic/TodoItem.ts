@@ -23,6 +23,11 @@ export async function createTodo(
         name: createTodoRequest.name,
         dueDate: createTodoRequest.dueDate,
         done: false,
-        attachmentUrl: `https://vendastasandbox.websitepro.hosting/wp-content/uploads/2020/06/website.jpg`
+        attachmentUrl: `https://${todoAccess.getBucketName}.s3.amazonaws.com/${itemId}`
       })
+  }
+
+  export async function getUploadUrl(todoId: string): Promise<string> {
+    //return {uploadUrl: todoAccess.getUploadUrl(todoId)}
+    return todoAccess.getUploadUrl(todoId)
   }
