@@ -1,4 +1,5 @@
 import { TodoItem } from '../models/TodoItem';
+import { UpdateTodoRequest } from '../requests/UpdateTodoRequest';
 import * as AWS  from 'aws-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { createLogger } from '../utils/logger'
@@ -71,6 +72,32 @@ export class TodoAccess {
           Key: imageId,
           Expires: this.urlExpiration
         })
+    }
+
+    async updateTodo(todoId: string, todoUpdate: UpdateTodoRequest): Promise<void> {
+
+        this.logger.info('Updating Todo', {
+            pid: this.pid
+        })
+
+        const result = await this.docClient.update({
+            TableName: this.todosTable,
+            Key: {todoId: todoId},
+            UpdateExpression: 'set #todo_name = :newName, dueDate=:newDueDate, done=:newDone', //for some reason i can't use 'name' as as attribute value. I had to use #todo_name and later set the actual name i want
+            ExpressionAttributeNames: {'#todo_name': 'name'}, //renaming the #todo_name to the actual name i want it to have in the DB
+            ExpressionAttributeValues: {
+                ':newName': todoUpdate.name,
+                ':newDueDate': todoUpdate.dueDate,
+                ':newDone': todoUpdate.done
+            },
+            ReturnValues: 'ALL_NEW' //UPDATED_NEW this value will return the updated field while ALL_NEW wil return the whole filed with updated value
+        }).promise()
+
+        this.logger.info('UpdateResult: ', {
+            pid: this.pid,
+            result: result.Attributes as TodoItem
+        })
+
     }
 
 }
