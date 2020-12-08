@@ -100,4 +100,20 @@ export class TodoAccess {
 
     }
 
+    async deleteTodo(todoId: string) {
+        this.logger.info('Deleting a todo', {
+            pid: this.pid,
+            todoId: todoId
+        });
+    
+        await this.docClient.delete({
+          TableName: this.todosTable,
+          Key: {
+            todoId: todoId
+          }
+        }).promise();
+    
+        this.logger.info('DeleteItem succeeded')
+    }
+
 }

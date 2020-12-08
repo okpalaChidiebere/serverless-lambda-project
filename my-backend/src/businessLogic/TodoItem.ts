@@ -43,3 +43,8 @@ export async function createTodo(
       done: todoUpdate.done
     })
   }
+
+  export async function deleteTodo(todoId: string): Promise<void>{
+    
+    return await todoAccess.deleteTodo(todoId)
+  }
