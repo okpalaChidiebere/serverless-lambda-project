@@ -4,7 +4,8 @@ import 'source-map-support/register'
 import { createLogger } from '../../utils/logger'
 import * as uuid from 'uuid'
 import { verify } from 'jsonwebtoken'
-import { JwtPayload } from '../auth/JwtPayload'
+import { JwtPayload } from '../../auth/JwtPayload'
+import { getToken} from '../../auth/utils'
 import * as middy from 'middy'
 import { secretsManager } from 'middy/middlewares' //secretManager in middleware helps us read and cache secrets from AWS Secret Manager instead of us having to get the secrets fro aws-sdk ourselves
 
@@ -26,7 +27,7 @@ export const handler = middy(async (event: APIGatewayTokenAuthorizerEvent, conte
     
     
     try {
-      const decodedToken = await verifyToken(event.authorizationToken, context.AUTH0_SECRET[secretField])
+      const decodedToken = await requireAuth(event.authorizationToken, context.AUTH0_SECRET[secretField])
         logger.info('User was authorized: ', {
             event: event.authorizationToken,
             pid: pId 
@@ -69,17 +70,11 @@ export const handler = middy(async (event: APIGatewayTokenAuthorizerEvent, conte
          
 })
 
-async function verifyToken(authHeader: string, auth0Secret: string): Promise<JwtPayload>{ //returns jwt token
-  if (!authHeader)
-    throw new Error('No authentication header')
+async function requireAuth(authHeader: string, auth0Secret: string): Promise<JwtPayload>{ //returns jwt token
+  
+  const token = getToken(authHeader);
 
-  if (!authHeader.toLowerCase().startsWith('bearer '))
-    throw new Error('Invalid authentication header')
-
-  const split = authHeader.split(' ')
-  const token = split[1]
-
-  return verify(token, auth0Secret) as JwtPayload //we verify the result and cast the result into the token format
+  return verify(token, auth0Secret) as JwtPayload//we verify the result and cast the result into the token format
 
   //A request has been authorised
 }

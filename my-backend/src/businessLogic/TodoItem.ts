@@ -6,19 +6,22 @@ import * as uuid from 'uuid'
 
 const todoAccess = new TodoAccess()
 
-export async function getAllTodos(): Promise<TodoItem[]> {
-    return todoAccess.getAllTodos()
+export async function getAllTodos(userID: string): Promise<TodoItem[]> {
+  //const userId = "Oauth-12345"
+
+    return todoAccess.getAllTodos(userID)
 }
 
 export async function createTodo(
     createTodoRequest: CreateTodoRequest,
+    userID: string
   ): Promise<TodoItem> {
 
     const itemId = uuid.v4()
-    const userId = "Oauth-12345"
+    //const userId = "Oauth-12345"
 
     return await todoAccess.createTodo({
-        userId: userId,
+        userId: userID,
         todoId: itemId,
         createdAt: new Date().toISOString(),
         name: createTodoRequest.name,
@@ -34,17 +37,19 @@ export async function createTodo(
   }
 
   export async function updateTodo(
+    userID: string,
     todoId: string,
     todoUpdate: UpdateTodoRequest
   ): Promise<void> {
-    return await todoAccess.updateTodo(todoId,{
+    //const userId = "Oauth-12345"
+    return await todoAccess.updateTodo(userID, todoId,{
       name: todoUpdate.name,
       dueDate: todoUpdate.dueDate,
       done: todoUpdate.done
     })
   }
 
-  export async function deleteTodo(todoId: string): Promise<void>{
-    
-    return await todoAccess.deleteTodo(todoId)
+  export async function deleteTodo(userID: string, todoId: string): Promise<void>{
+    //const userId = "Oauth-12345"
+    return await todoAccess.deleteTodo(userID, todoId)
   }

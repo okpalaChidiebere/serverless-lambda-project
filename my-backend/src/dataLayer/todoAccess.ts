@@ -17,20 +17,30 @@ export class TodoAccess {
         private readonly docClient: DocumentClient = TodoAccess.createDynamoDBClient(),
         private readonly todosTable = process.env.TODOS_TABLE,
         private readonly bucketName = process.env.IMAGES_S3_BUCKET,
-        private readonly urlExpiration = +process.env.SIGNED_URL_EXPIRATION //convert string to number with the plus sign
+        private readonly urlExpiration = +process.env.SIGNED_URL_EXPIRATION, //convert string to number with the plus sign
+        private readonly todoIndex = process.env.IMAGE_ID_INDEX
         //private secretId = process.env.AUTH_0_SECRET_ID,
         //private readonly secretField = process.env.AUTH_0_SECRET_FIELD
         ){};
 
-    async getAllTodos(): Promise<TodoItem[]> {
+    async getAllTodos(userId: string): Promise<TodoItem[]> {
 
         this.logger.info('Getting all todos', {
             // Additional information stored with a log statement
-            pid: this.pid
+            pid: this.pid,
+            userId: userId
         })
 
-        const result = await this.docClient.scan({
-            TableName: this.todosTable
+        const result = await this.docClient.query({
+            TableName: this.todosTable,
+            IndexName : this.todoIndex,
+            KeyConditionExpression: '#userId =:uId',
+            ExpressionAttributeNames: {
+                '#userId': 'userId'
+            },
+            ExpressionAttributeValues: {
+                ':uId': userId
+            }
         }).promise()
 
         const todoItems = result.Items
@@ -79,7 +89,7 @@ export class TodoAccess {
         })
     }
 
-    async updateTodo(todoId: string, todoUpdate: UpdateTodoRequest): Promise<void> {
+    async updateTodo(userId: string, todoId: string, todoUpdate: UpdateTodoRequest): Promise<void> {
 
         this.logger.info('Updating Todo', {
             pid: this.pid
@@ -87,7 +97,10 @@ export class TodoAccess {
 
         const result = await this.docClient.update({
             TableName: this.todosTable,
-            Key: {todoId: todoId},
+            Key: {
+                userId: userId,
+                todoId: todoId
+            },
             UpdateExpression: 'set #todo_name = :newName, dueDate=:newDueDate, done=:newDone', //for some reason i can't use 'name' as as attribute value. I had to use #todo_name and later set the actual name i want
             ExpressionAttributeNames: {'#todo_name': 'name'}, //renaming the #todo_name to the actual name i want it to have in the DB
             ExpressionAttributeValues: {
@@ -105,7 +118,7 @@ export class TodoAccess {
 
     }
 
-    async deleteTodo(todoId: string) {
+    async deleteTodo(userId: string, todoId: string) {
         this.logger.info('Deleting a todo', {
             pid: this.pid,
             todoId: todoId
@@ -114,8 +127,9 @@ export class TodoAccess {
         await this.docClient.delete({
           TableName: this.todosTable,
           Key: {
+            userId: userId,
             todoId: todoId
-          }
+          },
         }).promise();
     
         this.logger.info('DeleteItem succeeded')

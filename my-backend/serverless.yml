@@ -18,7 +18,8 @@ provider:
   region: ${opt:region, 'ca-central-1'}
   environment:
     AWS_NODEJS_CONNECTION_REUSE_ENABLED: '1'
-    TODOS_TABLE: Todos-${self:provider.stage} # we will get Todos-dev. Serverless will go to the provider section, then get the stage value
+    TODOS_TABLE: Todos-${self:provider.stage}-1 # we will get Todos-dev. Serverless will go to the provider section, then get the stage value
+    TODO_ID_INDEX: TodoIdIndex
     IMAGES_S3_BUCKET: serverless-todo-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300  # The amount of time we will allow a user to use our URL. Our presingned url will expire after this time
     #AUTH_0_SECRET: '' # we now use AWS secret manager for secrets
@@ -51,7 +52,7 @@ functions:
     iamRoleStatements: #Lambda Minimal Privileges
       - Effect: Allow
         Action:
-          - dynamodb:Scan
+          - dynamodb:Query
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
   CreateTodo:
     handler: src/lambda/http/createTodo.handler
@@ -123,12 +124,27 @@ resources:
     TodosDynamoDBTable:
       Type: AWS::DynamoDB::Table
       Properties:
-        AttributeDefinitions:
+        AttributeDefinitions: #attributes listed here must be required before we can store the new data. Attributes here are used as partition or sort key(s) for the base or index table that is why they are required
+          - AttributeName: userId
+            AttributeType: S
+          - AttributeName: createdAt
+            AttributeType: S
           - AttributeName: todoId
             AttributeType: S
-        KeySchema:
-          - AttributeName: todoId
+        KeySchema:  # we use a composite key for this table(Todo-dev-1) as the primary key
+          - AttributeName: userId #partition key
             KeyType: HASH
+          - AttributeName: todoId # sort key. A todo item can have thesame userID(prtition key) but different todoID. A user can create many todods
+            KeyType: RANGE # we use sort key to perform range operations like ==, >, <, contains, etc So in our app we can update and delete item for a particular todoID BY providing the particular partition and sort key
+        GlobalSecondaryIndexes:
+          - IndexName: ${self:provider.environment.TODO_ID_INDEX}
+            KeySchema:  # we use a composite key for this index table as the primary key as well. We will get the list of todos from this table sorted by time
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: createdAt
+              KeyType: RANGE
+            Projection:
+              ProjectionType: ALL
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.TODOS_TABLE} # we will get Todos-dev. Serverless will go to the provider section, then get the evnvironmrnt object, then get the value for the TODOS_TABLE
 
