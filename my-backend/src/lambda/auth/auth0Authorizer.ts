@@ -1,14 +1,20 @@
-import { APIGatewayTokenAuthorizerEvent , CustomAuthorizerResult, APIGatewayAuthorizerHandler  } from 'aws-lambda'
+import { APIGatewayTokenAuthorizerEvent , CustomAuthorizerResult } from 'aws-lambda'
 import 'source-map-support/register'
 
 import { createLogger } from '../../utils/logger'
 import * as uuid from 'uuid'
+import { verify } from 'jsonwebtoken'
+import { JwtPayload } from '../auth/JwtPayload'
+import * as middy from 'middy'
+import { secretsManager } from 'middy/middlewares' //secretManager in middleware helps us read and cache secrets from AWS Secret Manager instead of us having to get the secrets fro aws-sdk ourselves
 
+const secretId = process.env.AUTH_0_SECRET_ID
+const secretField = process.env.AUTH_0_SECRET_FIELD
 
 const logger = createLogger('auth')
 const pId = uuid.v4()
 
-export const handler: APIGatewayAuthorizerHandler = async (event: APIGatewayTokenAuthorizerEvent): Promise<CustomAuthorizerResult> => {
+export const handler = middy(async (event: APIGatewayTokenAuthorizerEvent, context): Promise<CustomAuthorizerResult> => { //middy stores the secrets in the context param where we can read any secretField from
 
 
     //export type APIGatewayAuthorizerEvent = APIGatewayTokenAuthorizerEvent | APIGatewayRequestAuthorizerEvent;
@@ -17,15 +23,17 @@ export const handler: APIGatewayAuthorizerHandler = async (event: APIGatewayToke
         event: event.authorizationToken,
         pid: pId 
     })
+    
+    
     try {
-        verifyToken(event.authorizationToken)
+      const decodedToken = await verifyToken(event.authorizationToken, context.AUTH0_SECRET[secretField])
         logger.info('User was authorized: ', {
             event: event.authorizationToken,
             pid: pId 
         })
     
         return { ////return a policy that will allow the user access to any Lambda functions
-          principalId: 'user',
+          principalId: decodedToken.sub, //sub is the ID of user that pass authentication with Auth0
           policyDocument: {
             Version: '2012-10-17',
             Statement: [
@@ -58,23 +66,32 @@ export const handler: APIGatewayAuthorizerHandler = async (event: APIGatewayToke
           }
         }
       }
-    
-    function verifyToken(authHeader: string){ //returns void
-        if (!authHeader)
-          throw new Error('No authentication header')
-      
-        if (!authHeader.toLowerCase().startsWith('bearer '))
-          throw new Error('Invalid authentication header')
-      
-        const split = authHeader.split(' ')
-        const token = split[1]
+         
+})
 
-        if(token !== '123')  //mock id for now. We will later change this to actual token
-           throw new Error('Invalid toekn')
+async function verifyToken(authHeader: string, auth0Secret: string): Promise<JwtPayload>{ //returns jwt token
+  if (!authHeader)
+    throw new Error('No authentication header')
 
+  if (!authHeader.toLowerCase().startsWith('bearer '))
+    throw new Error('Invalid authentication header')
 
-        //A request has been authorised
-    }
-      
-    
+  const split = authHeader.split(' ')
+  const token = split[1]
+
+  return verify(token, auth0Secret) as JwtPayload //we verify the result and cast the result into the token format
+
+  //A request has been authorised
 }
+
+handler.use(
+  secretsManager({
+    awsSdkOptions: { region: 'ca-central-1' },
+    cache: true, //cache the secret value
+    cacheExpiryInMillis: 60000, //cache the result for one minute
+    throwOnFailedCall: true,  // Throw an error if can't read the secret
+    secrets: {  //what secrets to fetch
+      AUTH0_SECRET: secretId //we fetch the secret with secretId and store it in AUTH0_SECRET field
+    }
+  })
+)

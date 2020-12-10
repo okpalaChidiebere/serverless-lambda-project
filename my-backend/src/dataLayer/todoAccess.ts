@@ -8,13 +8,18 @@ import * as uuid from 'uuid'
 
 export class TodoAccess {
 
+    //private cachedSecret: string
+
     constructor(
         private logger: any = createLogger('dataLayer'),
+        //private readonly client: any = TodoAccess.secretManagerClient(),
         private pid = uuid.v4(),
         private readonly docClient: DocumentClient = TodoAccess.createDynamoDBClient(),
         private readonly todosTable = process.env.TODOS_TABLE,
         private readonly bucketName = process.env.IMAGES_S3_BUCKET,
         private readonly urlExpiration = +process.env.SIGNED_URL_EXPIRATION //convert string to number with the plus sign
+        //private secretId = process.env.AUTH_0_SECRET_ID,
+        //private readonly secretField = process.env.AUTH_0_SECRET_FIELD
         ){};
 
     async getAllTodos(): Promise<TodoItem[]> {
@@ -115,5 +120,33 @@ export class TodoAccess {
     
         this.logger.info('DeleteItem succeeded')
     }
+
+    /*static secretManagerClient() {
+        return new AWS.SecretsManager()
+    }*/
+
+    /*getSecretID(){
+        return process.env.AUTH_0_SECRET_ID
+    }
+
+    get getSecretField(){
+        return process.env.AUTH_0_SECRET_ID
+    }*/
+
+    /*async getAuthSecret(): Promise<any>{
+
+        const secretId = process.env.AUTH_0_SECRET_ID
+        //const secretField = process.env.AUTH_0_SECRET_FIELD
+
+        if(this.cachedSecret) return this.cachedSecret
+
+        const data = await this.client.getSecretValue({
+            SecretId : secretId
+        }).promise()
+
+        this.cachedSecret = data.SecretString
+
+        return JSON.parse(this.cachedSecret)
+    }*/
 
 }

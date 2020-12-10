@@ -21,6 +21,9 @@ provider:
     TODOS_TABLE: Todos-${self:provider.stage} # we will get Todos-dev. Serverless will go to the provider section, then get the stage value
     IMAGES_S3_BUCKET: serverless-todo-images-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300  # The amount of time we will allow a user to use our URL. Our presingned url will expire after this time
+    #AUTH_0_SECRET: '' # we now use AWS secret manager for secrets
+    AUTH_0_SECRET_ID: Auth0Secret-${self:provider.stage} #AWS resource called secret that will store our auth0 secret
+    AUTH_0_SECRET_FIELD: auth0Secret #we can have many fields for the secret resource we created. But we use one for our app
   apiGateway: 
     minimumCompressionSize: 1024
 
@@ -28,6 +31,15 @@ provider:
 functions:
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
+    iamRoleStatements:
+      - Effect: Allow
+        Action:
+          - secretsmanager:GetSecretValue
+        Resource: !Ref Auth0Secret
+      - Effect: Allow
+        Action:
+          - kms:Decrypt
+        Resource: !GetAtt KMSKey.Arn
   GetTodos:
     handler: src/lambda/http/getTodos.handler
     events:
@@ -151,4 +163,34 @@ resources:
               Action: 's3:GetObject' #to get object 
               Resource: 'arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}/*'
         Bucket: !Ref AttachmentsBucket  #We assign the policy to a Bucket by referencing the attachment bucket that we defined above
-
+    KMSKey: #we add a KMS key tool to encrypt our Auth0 secret
+      Type: AWS::KMS::Key
+      Properties:
+        Description: KMS key to encrypt Auth0 secret
+        KeyPolicy: #Add an IAM policy that allows our root user full access to this KMS key
+          Version: '2012-10-17'
+          Id: key-default-1
+          Statement:
+            - Sid: Allow administration of the key
+              Effect: Allow
+              Principal:
+                AWS:
+                  Fn::Join:
+                  - ':'
+                  - - 'arn:aws:iam:'
+                    - Ref: AWS::AccountId
+                    - 'root'
+              Action:
+                - 'kms:*'
+              Resource: '*'
+    KMSKeyAlias: #this is bacially the name of our key in a separate resource
+      Type: AWS::KMS::Alias
+      Properties:
+        AliasName: alias/auth0Key-${self:provider.stage} #human readable name for our key
+        TargetKeyId: !Ref KMSKey
+    Auth0Secret: #A SecretManager resource where we out our Auth0 secret
+      Type: AWS::SecretsManager::Secret
+      Properties:
+        Name: ${self:provider.environment.AUTH_0_SECRET_ID} #thesame name provided in the AUTH_O_SECRET_ID env variable
+        Description: Auth0 secret
+        KmsKeyId: !Ref KMSKey #to encrypt the value stored in this key, it should used the KMSKey resource we created
