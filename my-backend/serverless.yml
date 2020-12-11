@@ -4,11 +4,18 @@ custom:
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules: true
+  documentation: # not used for validation but nice to have
+    api:
+      info:
+        version: "v1.0.0"
+        title: "TodoApp API"
+        description: "Severless application for todo app"
 
 
 plugins:
   - serverless-webpack
   - serverless-iam-roles-per-function
+  - serverless-aws-documentation
 
 
 provider:
@@ -27,6 +34,7 @@ provider:
     AUTH_0_SECRET_FIELD: auth0Secret #we can have many fields for the secret resource we created. But we use one for our app
   apiGateway: 
     minimumCompressionSize: 1024
+    shouldStartNameWithService: true # Preparation for serverless framework v3.0.0 More Info: https://www.serverless.com/framework/docs/deprecations/#AWS_API_GATEWAY_NAME_STARTING_WITH_SERVICE
 
 
 functions:
@@ -62,6 +70,10 @@ functions:
           path: todos
           cors: true
           authorizer: Auth
+          request:
+            # Schema that will be used to validate incoming requests
+            schema:
+              application/json: ${file(models/create-todo-request.json)} #this will read the definition of our schema from a file in the /models/create-todo-request.json
     iamRoleStatements:
       - Effect: Allow
         Action:
@@ -93,6 +105,10 @@ functions:
           path: todos/{todoId}
           cors: true
           authorizer: Auth
+          request:
+            # Schema that will be used to validate incoming requests
+            schema:
+              application/json: ${file(models/update-todo-request.json)}
     iamRoleStatements:
       - Effect: Allow
         Action:
