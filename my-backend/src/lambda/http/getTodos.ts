@@ -18,7 +18,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   // TODO: Get all TODO items for a current user
   const todos = await getAllTodos(userId)
 
-  if(todos.length !== 0){
+  //if(todos.length !== 0){
   return {
     statusCode: 200,
     headers: {
@@ -28,14 +28,14 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       items: todos
     })
   };
-  }
+  //}
 
-  return {
+  /*return {
     statusCode: 404,
     headers: {
       'Access-Control-Allow-Origin': '*'
     },
     body: ''
-  }
+  }*/
 
 }

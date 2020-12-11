@@ -135,6 +135,38 @@ export class TodoAccess {
         this.logger.info('DeleteItem succeeded')
     }
 
+    async updateTodoUrl(userId: string, todoId: string,) {
+        this.logger.info(`Updating a todo's URL for item:`, {
+          todoId: todoId,
+          userId: userId
+        })
+    
+        const url = `https://${this.bucketName}.s3.amazonaws.com/${todoId}`
+    
+        const result = await this.docClient.update({
+            TableName: this.todosTable,
+            Key: {
+              userId: userId,
+              todoId: todoId
+            },
+            ExpressionAttributeNames: {
+              '#todo_attachmentUrl': 'attachmentUrl'
+            },
+            ExpressionAttributeValues: {
+              ':attachmentUrl': url
+            },
+            UpdateExpression: 'SET #todo_attachmentUrl = :attachmentUrl',
+            ReturnValues: 'ALL_NEW',
+          }).promise();
+    
+        this.logger.info(`Update statement has completed without error`, { result: result });
+
+        //FYI: The image gets changed only one time. We would need a new todoID to properly refrence the new image. That was not done for this project.
+        //You cannot use UpdateItem to update any primary key attributes(partition key and/or sort key). 
+        //Instead, you will need to delete the item, and then use PutItem to create a new item with new attributes.
+        //we did not to this for this lesson
+      }
+
     /*static secretManagerClient() {
         return new AWS.SecretsManager()
     }*/

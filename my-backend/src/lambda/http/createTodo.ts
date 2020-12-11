@@ -8,7 +8,7 @@ import { createTodo } from '../../businessLogic/TodoItem'
 import { createLogger } from '../../utils/logger';
 import { getToken, parseUserId } from '../../auth/utils';
 
-const logger = createLogger('getTodos');
+const logger = createLogger('createTodos');
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
 
@@ -19,7 +19,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
   const userId = parseUserId(jwtToken);
   const newTodo: CreateTodoRequest = JSON.parse(event.body)
 
-  const newItem = await createTodo(newTodo, userId)
+  const item = await createTodo(newTodo, userId)
 
   return {
     statusCode: 201,
@@ -27,7 +27,7 @@ export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEven
       'Access-Control-Allow-Origin': '*',
     },
     body: JSON.stringify({
-      newItem
+      item
     })
   }
 }
