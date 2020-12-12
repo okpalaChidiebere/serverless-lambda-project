@@ -16,8 +16,6 @@ export class TodoAccess {
         private pid = uuid.v4(),
         private readonly docClient: DocumentClient = TodoAccess.createDynamoDBClient(),
         private readonly todosTable = process.env.TODOS_TABLE,
-        private readonly bucketName = process.env.IMAGES_S3_BUCKET,
-        private readonly urlExpiration = +process.env.SIGNED_URL_EXPIRATION, //convert string to number with the plus sign
         private readonly todoIndex = process.env.IMAGE_ID_INDEX
         //private secretId = process.env.AUTH_0_SECRET_ID,
         //private readonly secretField = process.env.AUTH_0_SECRET_FIELD
@@ -66,29 +64,6 @@ export class TodoAccess {
         return new AWS.DynamoDB.DocumentClient()
     }
 
-    createS3Client() {
-        return new AWS.S3({
-            signatureVersion: 'v4'
-        })
-    }
-
-    get getBucketName() {
-        return process.env.IMAGES_S3_BUCKET
-    }
-
-    getUploadUrl(imageId: string) {
-
-        this.logger.info('Getting PreSignedURL', {
-            pid: this.pid
-        })
-
-        return this.createS3Client().getSignedUrl('putObject', {
-          Bucket: this.bucketName,
-          Key: imageId,
-          Expires: this.urlExpiration
-        })
-    }
-
     async updateTodo(userId: string, todoId: string, todoUpdate: UpdateTodoRequest): Promise<void> {
 
         this.logger.info('Updating Todo', {
@@ -135,13 +110,13 @@ export class TodoAccess {
         this.logger.info('DeleteItem succeeded')
     }
 
-    async updateTodoUrl(userId: string, todoId: string,) {
+    async updateTodoUrl(userId: string, todoId: string, bucketName: string) {
         this.logger.info(`Updating a todo's URL for item:`, {
           todoId: todoId,
           userId: userId
         })
     
-        const url = `https://${this.bucketName}.s3.amazonaws.com/${todoId}`
+        const url = `https://${bucketName}.s3.amazonaws.com/${todoId}`
     
         const result = await this.docClient.update({
             TableName: this.todosTable,
