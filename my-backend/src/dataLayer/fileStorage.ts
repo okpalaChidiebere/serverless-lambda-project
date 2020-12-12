@@ -1,8 +1,12 @@
 import * as AWS  from 'aws-sdk';
+import * as AWSXRay from 'aws-xray-sdk'
 import * as uuid from 'uuid'
 
 
 import { createLogger } from '../utils/logger';
+
+const XAWS = AWSXRay.captureAWS(AWS)
+
 
 export class FileStorage {
     
@@ -15,7 +19,7 @@ export class FileStorage {
     ) {}
 
     static createS3Client() {
-      return new AWS.S3({
+      return new XAWS.S3({
           signatureVersion: 'v4'
        })
     }

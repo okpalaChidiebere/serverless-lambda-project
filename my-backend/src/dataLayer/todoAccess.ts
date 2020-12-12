@@ -1,10 +1,13 @@
 import { TodoItem } from '../models/TodoItem';
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest';
 import * as AWS  from 'aws-sdk'
+import * as AWSXRay from 'aws-xray-sdk'
 import { DocumentClient } from 'aws-sdk/clients/dynamodb'
 import { createLogger } from '../utils/logger'
 import * as uuid from 'uuid'
 
+
+const XAWS = AWSXRay.captureAWS(AWS)
 
 export class TodoAccess {
 
@@ -61,7 +64,7 @@ export class TodoAccess {
     }
 
     static createDynamoDBClient() {
-        return new AWS.DynamoDB.DocumentClient()
+        return new XAWS.DynamoDB.DocumentClient()
     }
 
     async updateTodo(userId: string, todoId: string, todoUpdate: UpdateTodoRequest): Promise<void> {

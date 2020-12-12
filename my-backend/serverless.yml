@@ -35,6 +35,16 @@ provider:
   apiGateway: 
     minimumCompressionSize: 1024
     shouldStartNameWithService: true # Preparation for serverless framework v3.0.0 More Info: https://www.serverless.com/framework/docs/deprecations/#AWS_API_GATEWAY_NAME_STARTING_WITH_SERVICE
+  iamRoleStatements: #this will be set by all functions
+    - Effect: Allow
+      Action:
+        - "xray:PutTraceSegments"
+        - "xray:PutTelemetryRecords"
+      Resource:
+        - '*'
+  tracing:
+    lambda: true  # enbable tracing for our lambda functions
+    apiGateway: true # enable tracing for our API Gateway
 
 
 functions:
